@@ -1,0 +1,8 @@
+var a,b,c
+a := 4
+b := 5
+if a > 3:
+    a := a + 2
+if b < 6:
+    b := b + 1
+    GOTO 4
