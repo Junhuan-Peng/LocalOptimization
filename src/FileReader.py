@@ -1,3 +1,7 @@
+"""
+文件读取
+从指定文件中读取源码内容
+"""
 class FileReader:
     """
     文件读取类——用于从指定的文件中读取源码
@@ -13,8 +17,6 @@ class FileReader:
         """
         if filename is None:
             return
-        elif type(filename) is not str:
-            raise TypeError('文件名要求为字符串！')
         else:
             try:
                 with open(filename, 'r') as f:
@@ -40,7 +42,7 @@ class FileReader:
         :raise: FileNotFoundError
         """
         try:
-            with open(filename,'r') as f:
+            with open(filename, 'r') as f:
                 self.__result = "".join(f.readlines())
         except FileNotFoundError as e:
             print(e)
