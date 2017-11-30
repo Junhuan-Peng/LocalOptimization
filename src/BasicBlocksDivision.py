@@ -48,4 +48,4 @@ class BasicBlockSplitTool:
         :return: list of basic block
         """
         entrylist = BasicBlockSplitTool.__find_entry(str)
-        
+
