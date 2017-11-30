@@ -1,2 +1,4 @@
 #忽略.idea目录及其以下的文件
 /.idea/*
+/.gitignore~
+/...gitignore.un~
