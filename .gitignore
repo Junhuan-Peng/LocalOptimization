@@ -2,4 +2,4 @@
 /.idea/*
 /.gitignore~
 *.un~
-/src/__pycache
+/src/__pycache__
