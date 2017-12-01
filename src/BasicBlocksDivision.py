@@ -13,17 +13,22 @@
 3.凡未被纳入某一基本块中的语句，可以从程序中删除。
 """
 
+import re
+
 
 class BasicBlock:
     """
     记录分割完成的基本块
     """
-    __code = None  # 记录源码
-    __index = []  # 记录源码所在行号
 
-    def __init__(self, code: str, start=0, end=len(str)):
-        self.__code = code[start:end]
+    def __init__(self, code: str, start=0, end=-1):
+        self.__code = []
+        for line in code[start:end]:
+            self.__code.append(line)
         self.__index = range(start, end)
+
+    def __repr__(self):
+        return '\n'.join(self.__code)
 
 
 class BasicBlockSplitTool:
@@ -38,7 +43,18 @@ class BasicBlockSplitTool:
         :param code: 源码
         :return: list of entry
         """
-        pass
+        entry = []
+        entry.append(0)  # 程序第一句是入口
+        gotopattern = re.compile(r'\s*GOTO (\d+)')
+        lines = code.splitlines()
+        for i, line in enumerate(lines):
+            result = re.match(pattern=gotopattern, string=line)  # 匹配转移语句
+            if result is not None:
+                gotolinenum = int(result.group(1))
+                entry.append(gotolinenum - 1)
+                entry.append(i + 1)
+        entry.sort()
+        return entry
 
     @staticmethod
     def basic_block_split(code: str) -> list:
@@ -47,5 +63,34 @@ class BasicBlockSplitTool:
         :param code: 源码
         :return: list of basic block
         """
-        entrylist = BasicBlockSplitTool.__find_entry(str)
+        entrylist = BasicBlockSplitTool.__find_entry(code)
+        print(entrylist)
+        lines = code.splitlines()
+        basic_blocks = []
+        last_index = 0
+        for index in entrylist[1:]:
+            print(index)
+            basic_blocks.append(BasicBlock(lines, last_index, index))
+            last_index = index
+        return basic_blocks
 
+
+if __name__ == '__main__':
+    test_str = '''var a,b,c
+a := 4
+b := 5
+if a > 3:
+    a := a + 2
+if b < 6:
+    b := b + 1
+    GOTO 4
+if a+b ==20:
+    GOTO 6
+if a>4:
+    GOTO 7
+'''
+bbs = BasicBlockSplitTool.basic_block_split(test_str)
+
+for i in bbs:
+    print(i)
+    print('**************')

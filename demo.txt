@@ -6,3 +6,7 @@ if a > 3:
 if b < 6:
     b := b + 1
     GOTO 4
+if a+b ==20:
+    GOTO 6
+if a>4:
+    GOTO 7
