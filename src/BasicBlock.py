@@ -4,10 +4,28 @@
 import re
 
 
+def HHH(c):
+    def wrapper(f):
+        def result():
+            print(c + c + c + c + c + c)
+            r = f()
+            print(c + c + c + c + c + c)
+            return r
+
+        return result
+
+    return wrapper
+
+
+@HHH('*')
+def printHHH():
+    print('hhh')
+
+
 class VarTable:
     """
     记录变量的使用情况，包括变量名、值、引用
-    | 变量 | 值 | 引用行数列表 | 出现的行数列表 |
+    | 变量 | 值 | 引用行数列表 | 出现的行数列表 | 最新赋值行 |
     """
 
     def __init__(self):
@@ -27,7 +45,7 @@ class VarTable:
         else:
             return False, None
 
-    def change_var_status(self, var: str, linenumber: int, **kwargs) :
+    def change_var_status(self, var: str, linenumber: int, **kwargs):
         """
          修改变量状态
 
@@ -35,6 +53,7 @@ class VarTable:
         :param linenumber: 变量出现的索引
         :keyword value: 值
         :keyword referenced_line_number: 被引用的行数
+        :keyword lastest_assign_line: 最新被赋值的行
         :return: None
         """
 
@@ -42,7 +61,8 @@ class VarTable:
         for index, record in enumerate(self.__vars):
             if var.__eq__(record[0]):
                 # record == self.__vars
-                record[3].append(linenumber)
+                if linenumber not in record[3]:
+                    record[3].append(linenumber)
 
                 if 'value' in keys:
                     record[1] = kwargs['value']
@@ -52,10 +72,12 @@ class VarTable:
                         record[2].append(kwargs['referenced_line_number'])
                     else:
                         record[2].append(kwargs['referenced_line_number'])
-                print('{var}:{record}'.format(var=self.__vars[index][0], record=self.__vars[index]))
+                if 'lastest_assign_line' in keys:
+                    record[4] = kwargs['lastest_assign_line']
+                # print('{var}:{record}'.format(var=self.__vars[index][0], record=self.__vars[index]))
 
     def add_var(self, var: str):
-        self.__vars.append([var, None, None, []])  # 增加变量， 无值， 无引用，出现的行号
+        self.__vars.append([var, None, None, [], 1000])  # 增加变量， 无值， 无引用，出现的行号, 最新赋值行
 
     def get_vars(self):
         return self.__vars
@@ -84,7 +106,7 @@ class BasicBlock:
 
     """
     __VARIABLE_ASSIGNED_STATEMENT = re.compile(r'^\s*(\w+)\s*:=\s*(\S+)\s*$')  # 变量赋值正则
-    __VARIABLE_FIND = re.compile(r'\b[a-zA-Z]+\b')
+    __VARIABLE_FIND = re.compile(r'\b[a-zA-Z]\w*\b')
 
     def __init__(self, code: list, start=0, end=-1):
         self.__code = [line for line in code[start:end]]  # 记录基本块的代码
@@ -122,9 +144,14 @@ class BasicBlock:
                         self.__var_table.add_var(var)  # 重新向表中添加该变量
                         self.__var_table.change_var_status(var, index, value=value)
 
+                self.__del_redundant_operations(var, value, index)  # 判断当前变量是否需要删除多余运算
+                self.__var_table.change_var_status(var, index, lastest_assign_line=index)
                 # ----------------对值的处理-------------------
                 # 先从中找到变量，如果没有则pass
                 # 如果有， 先看变量表中有没有，如果有，则修改其的引用列表；否则向变量表中添加新变量
+                result = re.match(self.__VARIABLE_ASSIGNED_STATEMENT, line)  # 匹配赋值
+                value = result.group(2)
+
                 vars_in_value = re.findall(self.__VARIABLE_FIND, value)
                 for var in vars_in_value:
                     ret, _ = self.__var_table.find_var(var)
@@ -141,7 +168,6 @@ class BasicBlock:
         :return:
         """
         self.__statistic_variables()
-        self.__del_redundant_operations()
         self.__merge_knowned_member()
         self.__del_unreferenced_var()
         self.print_var_table()
@@ -173,17 +199,45 @@ class BasicBlock:
 
         :return:
         """
+
         pass
 
-    def __del_redundant_operations(self):
+    def __del_redundant_operations(self, var: str, value: str, index: int):
         """
         删除多余运算
 
+        :param var: 测试变量（等号左侧）
+        :param value: 测试值（等号右侧）
+        :param index: 行号
         :return:
         """
-        # 在变量表中找到相同value，
+        #  删除多余运算应满足两个条件
+        #  一，表达式的值应该相同
+        #  二，如果要让"C1 = 4*I;C2 = 4*I" ==>  "C1 = 4*I;C2 = C1"，应满足
+        #  lastest_assign_line(I) < lastest_assign_line(C1) < lastest_assign_line(C2)
 
-        pass
+        vars_in_value = re.findall(self.__VARIABLE_FIND, value)
+        if len(vars_in_value) == 0:  # 如果值中不存在变量则返回
+            return
+        for record in self.__var_table.get_vars():
+            if record[0].__eq__(var):  # 不和自己比较
+                continue
+            if record[1] is None:  # 存在一些变量未赋值,不具有比较性
+                continue
+            if record[1].replace(' ', '').__eq__(value.replace(' ', '')):  # 找到相同值
+                temp_var = record[0]
+                print('{temp_var} : {record}'.format(temp_var=temp_var, record=record))
+                for var_in_left in vars_in_value:
+                    ret, temp_record = self.__var_table.find_var(var_in_left)
+                    if temp_record[1] is None:   # 存在一些变量未赋值,则认为满足
+                        continue
+                    if temp_record[4] < record[4] < index:  # 该变量满足
+                        continue
+                    else:
+                        break  # 有一个变量不满足，则不满足整体
+                else:  # 如果所有变量都满足了，则可以替换 “var := value  ==>  var:=temp_var”
+                    self.__code[index] = var + " := " + temp_var
+                    self.__var_table.change_var_status(var, index, value=temp_var)
 
     def print_var_table(self):
         for record in self.__var_table.get_vars():
@@ -191,4 +245,4 @@ class BasicBlock:
 
 
 if __name__ == '__main__':
-    pass
+    printHHH()
