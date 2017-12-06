@@ -24,7 +24,7 @@ class FileReader:
             except FileNotFoundError as e:
                 print(e)
 
-    def getresult(self):
+    def get_result(self):
         """
         返回源码文本，如果未加载文件或未正确加载文件则返回一个空列表
 
@@ -38,7 +38,8 @@ class FileReader:
     def fileload(self, filename):
         """
         加载指定文件
-        :param filename:
+
+        :param filename: 文件路径
         :raise: FileNotFoundError
         """
         try:
@@ -50,4 +51,4 @@ class FileReader:
 
 if __name__ == '__main__':
     fr = FileReader('demo.txt')
-    print(fr.getresult())
+    print(fr.get_result())

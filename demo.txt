@@ -1,12 +1,6 @@
 var a,b,c
-a := 4
-b := 5
-if a > 3:
-    a := a + 2
-if b < 6:
-    b := b + 1
-    GOTO 4
-if a+b ==20:
-    GOTO 6
-if a>4:
-    GOTO 7
+a := 7
+c := a
+b := 3*c*a0
+a := 3*c*a0
+c := b

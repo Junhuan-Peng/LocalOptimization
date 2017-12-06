@@ -15,37 +15,25 @@
 
 import re
 
-
-class BasicBlock:
-    """
-    记录分割完成的基本块
-    """
-
-    def __init__(self, code: str, start=0, end=-1):
-        self.__code = []
-        for line in code[start:end]:
-            self.__code.append(line)
-        self.__index = range(start, end)
-
-    def __repr__(self):
-        return '\n'.join(self.__code)
+from src.BasicBlock import BasicBlock
 
 
 class BasicBlockSplitTool:
     """
-    划分工具
+    基本块划分工具
     """
 
     @staticmethod
     def __find_entry(code: str) -> list:
         """
         寻找源码的入口
+
         :param code: 源码
         :return: list of entry
         """
         entry = []
         entry.append(0)  # 程序第一句是入口
-        gotopattern = re.compile(r'\s*GOTO (\d+)')
+        gotopattern = re.compile(r'\s*GOTO (\d+)\s*?')
         lines = code.splitlines()
         for i, line in enumerate(lines):
             result = re.match(pattern=gotopattern, string=line)  # 匹配转移语句
@@ -60,16 +48,20 @@ class BasicBlockSplitTool:
     def basic_block_split(code: str) -> list:
         """
         划分基本块
+
         :param code: 源码
-        :return: list of basic block
+        :return: list of basic blocks
         """
+
         entrylist = BasicBlockSplitTool.__find_entry(code)
-        print(entrylist)
-        lines = code.splitlines()
         basic_blocks = []
+        lines = code.splitlines()
+        if len(entrylist) == 1:  # 如果只有一个元素，那么一定是0
+            basic_blocks.append(BasicBlock(lines, 0, len(lines)))
+            return basic_blocks
+
         last_index = 0
         for index in entrylist[1:]:
-            print(index)
             basic_blocks.append(BasicBlock(lines, last_index, index))
             last_index = index
         return basic_blocks
@@ -89,8 +81,8 @@ if a+b ==20:
 if a>4:
     GOTO 7
 '''
-bbs = BasicBlockSplitTool.basic_block_split(test_str)
+    bbs = BasicBlockSplitTool.basic_block_split(test_str)
 
-for i in bbs:
-    print(i)
-    print('**************')
+    for i in bbs:
+        print(i)
+        print('**************')

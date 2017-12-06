@@ -3,6 +3,8 @@
 """
 import os
 from src.FileReader import FileReader
+from src.BasicBlocksDivision import BasicBlockSplitTool
+from src.BasicBlock import BasicBlock
 
 cwd = os.path.dirname(__file__)  # 获取当前文件所在目录
 
@@ -15,4 +17,20 @@ if __name__ == '__main__':
     fr = FileReader(file_path)
     print('源码：')
 
-    print(fr.getresult())
+    result = fr.get_result()
+    code = ''
+    for s in result:
+        code += s
+
+    basic_blocks = None
+    if code is not None:
+        basic_blocks = BasicBlockSplitTool.basic_block_split(code=code)
+    for bb in basic_blocks:
+        print('优化前：')
+        print(bb)
+        print()
+        bb.optimization()
+        print()
+        print('优化后：')
+        print(bb)
+        print('-----------')
