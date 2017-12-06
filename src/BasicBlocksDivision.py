@@ -14,6 +14,7 @@
 """
 
 import re
+
 from src.BasicBlock import BasicBlock
 
 
@@ -26,6 +27,7 @@ class BasicBlockSplitTool:
     def __find_entry(code: str) -> list:
         """
         寻找源码的入口
+
         :param code: 源码
         :return: list of entry
         """
@@ -46,13 +48,18 @@ class BasicBlockSplitTool:
     def basic_block_split(code: str) -> list:
         """
         划分基本块
+
         :param code: 源码
-        :return: list of basic block
+        :return: list of basic blocks
         """
 
         entrylist = BasicBlockSplitTool.__find_entry(code)
-        lines = code.splitlines()
         basic_blocks = []
+        lines = code.splitlines()
+        if len(entrylist) == 1:  # 如果只有一个元素，那么一定是0
+            basic_blocks.append(BasicBlock(lines, 0, len(lines)))
+            return basic_blocks
+
         last_index = 0
         for index in entrylist[1:]:
             basic_blocks.append(BasicBlock(lines, last_index, index))
