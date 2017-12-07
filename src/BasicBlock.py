@@ -2,25 +2,7 @@
 在每一个基本块中实现：合并已知量、删除多余运算和删除无用赋值三种局部优化
 """
 import re
-
-
-def HHH(c):
-    def wrapper(f):
-        def result():
-            print(c + c + c + c + c + c)
-            r = f()
-            print(c + c + c + c + c + c)
-            return r
-
-        return result
-
-    return wrapper
-
-
-@HHH('*')
-def printHHH():
-    print('hhh')
-
+import sympy
 
 class VarTable:
     """
@@ -105,8 +87,9 @@ class BasicBlock:
     保存分割完成的基本块
 
     """
-    __VARIABLE_ASSIGNED_STATEMENT = re.compile(r'^\s*(\w+)\s*:=\s*(\S+)\s*$')  # 变量赋值正则
-    __VARIABLE_FIND = re.compile(r'\b[a-zA-Z]\w*\b')
+    __VARIABLE_ASSIGNED_STATEMENT = re.compile(r'^\s*(\w+)\s*:=\s*(.+)$')  # 变量赋值正则
+    __VARIABLE_FIND = re.compile(r'\b[a-zA-Z]\w*\b')  # 匹配出现的变量名
+    __NUMBER_VALUE = re.compile(r'^\s*\d+\s*$')  # 匹配出现的数值
 
     def __init__(self, code: list, start=0, end=-1):
         self.__code = [line for line in code[start:end]]  # 记录基本块的代码
@@ -160,6 +143,10 @@ class BasicBlock:
                     else:  # 如果变量没有在表中出现过
                         self.__var_table.add_var(var)
                         self.__var_table.change_var_status(var, index, referenced_line_number=index)
+            for code in self.__code:
+                print(code)
+            self.print_var_table()
+            print('%%%%%%%%%%%%%%%%%%%%%%%%')
 
     def optimization(self):
         """
@@ -195,12 +182,81 @@ class BasicBlock:
 
     def __merge_knowned_member(self):
         """
-        合并已知量
+        合并已知量,对可计算量进行提前计算： a := 3*7 + b  ==>  a := 21 + b  ,如果b已知，则可做进一步值的化简
 
         :return:
         """
 
-        pass
+        print('合并已知量：')
+
+        var_record = {}  # 记录变量赋值情况 [变量名|值]，值的范围限制在数字
+        #  如果找到已赋值的变量，则直接替换，如果变量为没有赋值或所赋值不可直接计算，则转换为sympy.Symbol对象以支持运算
+        for index, line in enumerate(self.__code):
+
+            print('------- 当前语句：', line)
+
+            result = re.match(self.__VARIABLE_ASSIGNED_STATEMENT, line)  # 匹配赋值语句
+            if result is not None:
+                var = result.group(1)
+                value = result.group(2)
+
+                print('等号左边：', var)
+                print('等号右边：', value)
+
+                number = re.match(self.__NUMBER_VALUE, value)  # 匹配变量所赋的值是否是数值
+                if number is not None:  # 如果是
+
+                    print(value, '是数值\n\n')
+
+                    var_record[var] = value  # 直接在变量记录中更新值
+                else:  # 如果变量所赋值是表达式
+                    if re.match(r'^\s*\w+\s*$',value):  # 如果右侧只有一个变量，例如  a := b  则不需要替换
+
+                        print(value,'只是一个简单的变量，不需要替换')
+
+                        continue
+                    vars_in_value = re.findall(self.__VARIABLE_FIND, value)  # 提取所有表达式中的变量
+                    vars_in_value = list(set(vars_in_value))  # 去重
+
+                    print('找到的变量：', vars_in_value)
+
+                    for var_in_value in vars_in_value:
+
+                        print('当前待处理的变量：', var_in_value)
+
+                        if var_in_value in var_record.keys():  # 如果该变量已经存在表中
+                            temp_value = var_record[var_in_value]  # 取出值
+
+                            print(var_in_value, '已经存在记录中，其值为：', temp_value)
+
+                            if re.match(self.__NUMBER_VALUE, temp_value) is not None:  # 如果变量是数值
+
+                                print(temp_value, '是数值')
+                                print('执行', var_in_value + '=' + temp_value)
+
+                                exec(var_in_value + '=' + temp_value)
+                            else:  # 如果变量不是数值，则一定是表达式,将其转换为Symbol对象
+
+                                print(temp_value, '是表达式')
+                                print('执行', var_in_value + '=' + 'sympy.Symbol(\'' + var_in_value + '\')')
+
+                                exec(var_in_value + '=' + 'sympy.Symbol(\'' + var_in_value + '\')')
+                        else:  # 如果该变量不存在于表中，那么直接将其转换为Symbol对象
+
+                            print(var_in_value, '不在记录中')
+                            print('执行', var_in_value + '=' + 'sympy.Symbol(\'' + var_in_value + '\')')
+
+                            exec(var_in_value + '=' + 'sympy.Symbol(\'' + var_in_value + '\')')
+
+                    print('原表达式为：', value)
+
+                    value = eval(value)  # 计算表达式
+
+                    print('计算后的表达式为:', value)
+
+                    var_record[var] = str(value)  # 更新记录中的值
+                    value = var + ' := '+str(value)  # 更新源码
+                    self.__code[index] = value
 
     def __del_redundant_operations(self, var: str, value: str, index: int):
         """
@@ -229,7 +285,7 @@ class BasicBlock:
                 print('{temp_var} : {record}'.format(temp_var=temp_var, record=record))
                 for var_in_left in vars_in_value:
                     ret, temp_record = self.__var_table.find_var(var_in_left)
-                    if temp_record[1] is None:   # 存在一些变量未赋值,则认为满足
+                    if temp_record[1] is None:  # 存在一些变量未赋值,则认为满足
                         continue
                     if temp_record[4] < record[4] < index:  # 该变量满足
                         continue
@@ -238,6 +294,7 @@ class BasicBlock:
                 else:  # 如果所有变量都满足了，则可以替换 “var := value  ==>  var:=temp_var”
                     self.__code[index] = var + " := " + temp_var
                     self.__var_table.change_var_status(var, index, value=temp_var)
+                    self.__var_table.change_var_status(temp_var, index, referenced_line_number=index)
 
     def print_var_table(self):
         for record in self.__var_table.get_vars():
@@ -245,4 +302,4 @@ class BasicBlock:
 
 
 if __name__ == '__main__':
-    printHHH()
+    pass
