@@ -81,6 +81,8 @@ class VarTable:
             if var.__eq__(record[0]):
                 self.__vars.pop(index)
 
+    def clear(self):
+        self.__vars = []
 
 class BasicBlock:
     """
@@ -105,6 +107,9 @@ class BasicBlock:
 
         :return:
         """
+
+        self.__var_table.clear()
+
         for index, line in enumerate(self.__code):
             result = re.match(self.__VARIABLE_ASSIGNED_STATEMENT, line)  # 匹配赋值
             if result is not None:
@@ -157,6 +162,7 @@ class BasicBlock:
         self.__statistic_variables()
         self.__merge_knowned_member()
         self.__del_unreferenced_var()
+        self.__statistic_variables()
         self.print_var_table()
 
     def __del_unreferenced_var(self):
