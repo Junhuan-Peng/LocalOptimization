@@ -21,6 +21,7 @@ class FileReader:
             try:
                 with open(filename, 'r') as f:
                     self.__result = "".join(f.readlines())
+
             except FileNotFoundError as e:
                 print(e)
 
@@ -33,7 +34,7 @@ class FileReader:
         if self.__result is None:
             return []
         else:
-            return self.__result
+            return self.__result.splitlines()
 
     def fileload(self, filename):
         """

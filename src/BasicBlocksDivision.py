@@ -24,7 +24,7 @@ class BasicBlockSplitTool:
     """
 
     @staticmethod
-    def __find_entry(code: str) -> list:
+    def __find_entry(code: list) -> list:
         """
         寻找源码的入口
 
@@ -34,9 +34,14 @@ class BasicBlockSplitTool:
         entry = []
         entry.append(0)  # 程序第一句是入口
         gotopattern = re.compile(r'\s*GOTO (\d+)\s*?')
-        lines = code.splitlines()
+        lines = code
+
+    
+
         for i, line in enumerate(lines):
             result = re.match(pattern=gotopattern, string=line)  # 匹配转移语句
+
+
             if result is not None:
                 gotolinenum = int(result.group(1))
                 entry.append(gotolinenum - 1)
@@ -45,7 +50,7 @@ class BasicBlockSplitTool:
         return entry
 
     @staticmethod
-    def basic_block_split(code: str) -> list:
+    def basic_block_split(code: list) -> list:
         """
         划分基本块
 
@@ -55,7 +60,7 @@ class BasicBlockSplitTool:
 
         entrylist = BasicBlockSplitTool.__find_entry(code)
         basic_blocks = []
-        lines = code.splitlines()
+        lines = code
         if len(entrylist) == 1:  # 如果只有一个元素，那么一定是0
             basic_blocks.append(BasicBlock(lines, 0, len(lines)))
             return basic_blocks
