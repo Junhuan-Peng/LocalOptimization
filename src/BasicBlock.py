@@ -338,6 +338,9 @@ class BasicBlock:
                 print(code)
         print()
 
+    def get_code(self):
+        return '\n'.join([code for code in self.__code if code != ' '])
+
 
 if __name__ == '__main__':
     pass
